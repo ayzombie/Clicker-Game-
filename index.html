@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clicker Game</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(to right, #74ebd5, #acb6e5);
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    h2 {
+        font-size: 0.5rem;
+    }
+    #score, #cps {
+      font-size: 1.5rem;
+      margin: 10px;
+      font-weight: bold;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 10px;
+      background: #ff6f61;
+      color: white;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.1s ease, background 0.2s;
+    }
+    button:hover {
+      background: #ff4b3e;
+    }
+    button:active {
+      transform: scale(0.9);
+    }
+    .shop {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Clicker Game</h1>
+  <h2> (if you get to 5000 score you win!)</h2>
+  <div id="score">Score: 0</div>
+  <button onclick="addPoint()">Click Me!</button>
+  <div id="cps">CPS: 0</div>
+
+  <div class="shop">
+    <h2>Shop</h2>
+    <button id="upgradeBtn" onclick="buyUpgrade()">Upgrade Click (+1) — Cost: 10</button>
+    <button id="autoClickerBtn" onclick="buyAutoClicker()">Buy Auto-Clicker (+1/sec) — Cost: 50</button>
+    <button id="autoClicker2Btn" onclick="buyAutoClicker2()">Buy Auto-Clicker 2 (+5/sec) — Cost: 200</button>
+  </div>
+
+  <script>
+    let score = 0;
+    let pointsPerClick = 1;
+    let upgradeCost = 10;
+
+    let autoClickerCost = 50;
+    let autoClickers = 0;
+
+    let autoClicker2Cost = 200;
+    let autoClickers2 = 0;
+
+    // Load saved game
+    function loadGame() {
+      const saved = JSON.parse(localStorage.getItem("clickerSave"));
+      if (saved) {
+        score = saved.score || 0;
+        pointsPerClick = saved.pointsPerClick || 1;
+        upgradeCost = saved.upgradeCost || 10;
+
+        autoClickerCost = saved.autoClickerCost || 50;
+        autoClickers = saved.autoClickers || 0;
+
+        autoClicker2Cost = saved.autoClicker2Cost || 200;
+        autoClickers2 = saved.autoClickers2 || 0;
+      }
+      updateScore();
+      updateShop();
+    }
+
+    // Save game
+    function saveGame() {
+      const saveData = {
+        score,
+        pointsPerClick,
+        upgradeCost,
+        autoClickerCost,
+        autoClickers,
+        autoClicker2Cost,
+        autoClickers2
+      };
+      localStorage.setItem("clickerSave", JSON.stringify(saveData));
+    }
+
+    function updateScore() {
+      const cps = autoClickers * 1 + autoClickers2 * 5;
+      document.getElementById("score").innerText = "Score: " + score;
+      document.getElementById("cps").innerText = "CPS: " + cps;
+      saveGame();
+    }
+
+    function addPoint() {
+      score += pointsPerClick;
+      updateScore();
+    }
+
+    function buyUpgrade() {
+      if (score >= upgradeCost) {
+        score -= upgradeCost;
+        pointsPerClick++;
+        upgradeCost = Math.floor(upgradeCost * 1.3);
+        updateShop();
+        updateScore();
+      } else {
+        alert("Not enough points!");
+      }
+    }
+
+    function buyAutoClicker() {
+      if (score >= autoClickerCost) {
+        score -= autoClickerCost;
+        autoClickers++;
+        autoClickerCost = Math.floor(autoClickerCost * 1.5);
+        updateShop();
+        updateScore();
+      } else {
+        alert("Not enough points!");
+      }
+    }
+
+    function buyAutoClicker2() {
+      if (score >= autoClicker2Cost) {
+        score -= autoClicker2Cost;
+        autoClickers2++;
+        autoClicker2Cost = Math.floor(autoClicker2Cost * 1.5);
+        updateShop();
+        updateScore();
+      } else {
+        alert("Not enough points!");
+      }
+    }
+
+    function updateShop() {
+      document.getElementById("upgradeBtn").innerText =
+        "Upgrade Click (+" + pointsPerClick + ") — Cost: " + upgradeCost;
+      document.getElementById("autoClickerBtn").innerText =
+        "Buy Auto-Clicker (+" + autoClickers + "/sec) — Cost: " + autoClickerCost;
+      document.getElementById("autoClicker2Btn").innerText =
+        "Buy Auto-Clicker 2 (+" + autoClickers2 * 5 + "/sec) — Cost: " + autoClicker2Cost;
+    }
+        function endGame() {
+    // Reset everything
+    score = 0;
+    pointsPerClick = 1;
+    upgradeCost = 10;
+    autoClickers = 0;
+    autoClickerCost = 50;
+    autoClickers2 = 0;
+    autoClicker2Cost = 200;
+
+    updateScore();
+    updateShop();
+    saveGame(); // make sure save resets too
+    }
+
+    // Auto income
+    setInterval(() => {
+    const income = autoClickers * 1 + autoClickers2 * 5;
+    if (income > 0) {
+        score += income;
+        updateScore();
+    }
+
+    // End game condition
+    if (score >= 5000) { // or income if you want CPS based
+        alert("🎉 Congratulations! You reached 5000 points!");
+        endGame();
+    }
+    }, 1000);
+
+    // Initialize
+    loadGame();
+  </script>
+</body>
+</html>
