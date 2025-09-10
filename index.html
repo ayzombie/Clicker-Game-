@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clicker Game with Bouncing Balls & Save</title>
+<title>Clicker Game with Balls & Squares</title>
 <style>
   body {
     display: flex;
@@ -45,34 +45,47 @@
 <div class="shop">
   <h2>Shop</h2>
   <button id="upgradeBtn" onclick="buyUpgrade()">Upgrade Click (+1) — Cost: 10</button>
-  <button id="autoClickerBtn" onclick="buyAutoClicker()">Upgrade Ball Speed — Cost: 50</button>
+  <button id="autoClickerBtn" onclick="buyAutoClicker()">Upgrade Speed — Cost: 100</button>
   <button id="ballSpawnerBtn" onclick="buyBallSpawner()">Add Ball — Cost: 200</button>
-  <button id="ballValueBtn" onclick="buyBallValue()">Increase Ball Value — Cost: 500</button>
+  <button id="squareSpawnerBtn" onclick="buySquareSpawner()">Add Square — Cost: 200</button>
+  <button id="triangleSpawnerBtn" onclick="buyTriangleSpawner()">Add Triangle — Cost: 500</button>
+  <button id="ballValueBtn" onclick="buyBallValue()">Increase Value — Cost: 1000</button>
   <button onclick="restartGame()">Restart Game</button>
-
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
-<script>
+<script>  //start of javascript     variables!!!!!!!
 let score = 0;
 let pointsPerClick = 1;
 let upgradeCost = 10;
 
 let autoClickerLevel = 1;
-let autoClickerCost = 50;
+let autoClickerCost = 100;
 
-let ballSpawnerCount = 1;
+let ballSpawnerCount = 0;
 let ballSpawnerCost = 200;
 
+let squareSpawnerCount = 0;
+let squareSpawnerCost = 500;
+
+let triangleSpawnerCount = 0;
+let triangleSpawnerCost = 500;
+
 let ballValue = 1;
-let ballValueCost = 500;
+
+let squareValue = 2;
+
+let triangleValue = 5;
+
+let ballValueCost = 1000;
 
 let balls = [];
+let squares = [];
+let triangles = [];
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -81,38 +94,13 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-class Ball {
+class Ball {                    //START OF CLASSES!!!!!!!!!
   constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
     this.x = x;
     this.y = y;
     this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel;
     this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel;
     this.radius = 15;
-  }
-
-  update() {
-    this.x += this.dx;
-    this.y += this.dy;
-
-    if (this.x <= 0 || this.x >= canvas.width) {
-      this.dx *= -1;
-      score += ballValue;
-      updateScore();
-    }
-    if (this.y <= 0 || this.y >= canvas.height) {
-      this.dy *= -1;
-      score += ballValue;
-      updateScore();
-    }
-  }
-}
-  class Square {
-  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
-    this.x = x;
-    this.y = y;
-    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel;
-    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel;
-    this.radius = 10;
   }
 
   update() {
@@ -140,77 +128,236 @@ class Ball {
   }
 }
 
-// Functions for click and upgrades
+class Square {
+  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+    this.x = x;
+    this.y = y;
+    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 1.5;
+    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel * 1.5;
+    this.size = 25;
+  }
+
+  update() {
+    this.x += this.dx;
+    this.y += this.dy;
+
+    if (this.x <= 0 || this.x + this.size >= canvas.width) {
+      this.dx *= -1;
+      score += squareValue;
+      updateScore();
+    }
+    if (this.y <= 0 || this.y + this.size >= canvas.height) {
+      this.dy *= -1;
+      score += squareValue;
+      updateScore();
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = "#61a0ff";
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+  }
+}
+
+class Triangle {
+  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+    this.x = x;
+    this.y = y;
+    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 2;
+    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel * 2;
+    this.size = 30; // 👈 side length
+  }
+
+  update() {
+    this.x += this.dx;
+    this.y += this.dy;
+
+    if (this.x <= 0 || this.x + this.size >= canvas.width) {
+      this.dx *= -1;
+      score += triangleValue;
+      updateScore();
+    }
+    if (this.y <= 0 || this.y + this.size >= canvas.height) {
+      this.dy *= -1;
+      score += triangleValue;
+      updateScore();
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = "#ffa500"; // orange
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);                        // top point
+    ctx.lineTo(this.x - this.size / 2, this.y + this.size);
+    ctx.lineTo(this.x + this.size / 2, this.y + this.size);;
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+class Star {
+  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+    this.x = x;
+    this.y = y;
+    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 2;
+    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel * 2;
+    this.size = 30; // 👈 side length
+  }
+
+  update() {
+    this.x += this.dx;
+    this.y += this.dy;
+
+    if (this.x <= 0 || this.x + this.size >= canvas.width) {
+      this.dx *= -1;
+      score += triangleValue;
+      updateScore();
+    }
+    if (this.y <= 0 || this.y + this.size >= canvas.height) {
+      this.dy *= -1;
+      score += triangleValue;
+      updateScore();
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = "#ffa500"; // orange
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);                        // top point
+    ctx.lineTo(this.x - this.size / 2, this.y + this.size); // bottom left
+    ctx.lineTo(this.x + this.size / 2, this.y + this.size); // bottom right
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+                                        // Click + upgrades               //ENDD OF  CLASSES!!!!!
 function addPoint() { score += pointsPerClick; updateScore(); }
 
-function buyUpgrade() {
+function buyUpgrade() {                   //UPGRADE CLICK
   if (score >= upgradeCost) {
     score -= upgradeCost;
     pointsPerClick++;
-    upgradeCost = Math.floor(upgradeCost * 1.05);
+    upgradeCost = Math.floor(upgradeCost * 1.25);
     updateShop();
     updateScore();
   }
 }
 
-function buyAutoClicker() {
+function buyAutoClicker() {             //upgrade speed!
   if (score >= autoClickerCost) {
     score -= autoClickerCost;
     autoClickerLevel++;
-    autoClickerCost = Math.floor(autoClickerCost * 1.5);
-    balls.forEach(ball => { ball.dx *= 1.2; ball.dy *= 1.2; });
+    autoClickerCost = Math.floor(autoClickerCost * 1.3);
+    balls.forEach(b => { b.dx *= 1.2; b.dy *= 1.2; });
+    squares.forEach(s => { s.dx *= 1.2; s.dy *= 1.2; });
     updateShop();
     updateScore();
   }
 }
 
-function buyBallSpawner() {
+function buyBallSpawner() {                 //more balls!
   if (score >= ballSpawnerCost) {
     score -= ballSpawnerCost;
     ballSpawnerCount++;
-    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.01);
+    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.25);
     balls.push(new Ball());
     updateShop();
     updateScore();
   }
 }
 
-function buyBallValue() {
-  if (score >= ballValueCost) {
-    score -= ballValueCost;
-    ballValue++;
-    ballValueCost = Math.floor(ballValueCost * 2);
+function buySquareSpawner() {               //MORE SQUARES
+  if (score >= squareSpawnerCost) {
+    score -= squareSpawnerCost;
+    squareSpawnerCount++;
+    squareSpawnerCost = Math.floor(squareSpawnerCost * 1.3);
+    squares.push(new Square());
     updateShop();
     updateScore();
   }
 }
 
-function updateShop() {
-  document.getElementById("upgradeBtn").innerText = "Upgrade Click (+" + pointsPerClick + ") — Cost: " + upgradeCost;
-  document.getElementById("autoClickerBtn").innerText = "Upgrade Ball Speed (Lv " + autoClickerLevel + ") — Cost: " + autoClickerCost;
-  document.getElementById("ballSpawnerBtn").innerText = "Add Ball (Now " + ballSpawnerCount + ") — Cost: " + ballSpawnerCost;
-  document.getElementById("ballValueBtn").innerText = "Increase Ball Value (Now " + ballValue + ") — Cost: " + ballValueCost;
+function buyTriangleSpawner() {           //MORE TRIANGLES
+  if (score >= triangleSpawnerCost) {
+    score -= triangleSpawnerCost;
+    triangleSpawnerCount++;
+    triangleSpawnerCost = Math.floor(triangleSpawnerCost * 1.35);
+    triangles.push(new Triangle());
+    updateShop();
+    updateScore();
+  }
 }
 
-function updateScore() {
+function buyBallValue() {           //mORE VALUE LETS GO BABY!
+  if (score >= ballValueCost) {
+    score -= ballValueCost;
+    ballValue++;
+    squareValue += 2;
+    triangleValue += 5;
+    ballValueCost = Math.floor(ballValueCost * 1.9);
+    updateShop();
+    updateScore();
+  }
+}
+
+// Drawing
+function animate() {                  //ANIMATION!
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  balls.forEach(ball => { 
+    ball.update(); 
+    ball.draw(); });
+
+  squares.forEach(square => { 
+    square.update(); 
+    square.draw(); });
+
+  triangles.forEach(triangle => {
+    triangle.update();
+    triangle.draw();
+});
+
+  requestAnimationFrame(animate);
+}
+
+function updateShop() {           //UPDATE THE SHOP
+  document.getElementById("upgradeBtn").innerText = "Upgrade Click (+" + pointsPerClick + ") — Cost: " + upgradeCost;
+  document.getElementById("autoClickerBtn").innerText = "Upgrade Speed (Lv " + autoClickerLevel + ") — Cost: " + autoClickerCost;
+  document.getElementById("ballSpawnerBtn").innerText = "Add Ball (Now " + ballSpawnerCount + ") — Cost: " + ballSpawnerCost;
+  document.getElementById("squareSpawnerBtn").innerText = "Add Square (Now " + squareSpawnerCount + ") — Cost: " + squareSpawnerCost;
+  document.getElementById("ballValueBtn").innerText = "Increase Value (Now " + ballValue + ") — Cost: " + ballValueCost;
+  document.getElementById("triangleSpawnerBtn").innerText = "Add Triangle (Now " + triangleSpawnerCount + ") — Cost: " + triangleSpawnerCost;
+
+}
+
+function updateScore() {                    //UPDATE SCORE!
   document.getElementById("score").innerText = "Score: " + score;
-  document.getElementById("cps").innerText = "Balls: " + balls.length + " | Speed Lv: " + autoClickerLevel + " | Ball Value: " + ballValue;
+  document.getElementById("cps").innerText =
+    "Balls: " + balls.length +
+    " | Squares: " + squares.length +
+    " | Speed Lv: " + autoClickerLevel +
+    " | Value: " + ballValue;
   saveGame();
 }
 
-// SAVE / LOAD
-function saveGame() {
+                                        // Save / Load
+function saveGame() {                         //SAVE GAME
   const saveData = {
     score, pointsPerClick, upgradeCost,
     autoClickerLevel, autoClickerCost,
     ballSpawnerCount, ballSpawnerCost,
+    squareSpawnerCount, squareSpawnerCost,
     ballValue, ballValueCost,
-    balls: balls.map(b => ({x: b.x, y: b.y, dx: b.dx, dy: b.dy}))
+    balls: balls.map(b => ({x: b.x, y: b.y, dx: b.dx, dy: b.dy})),
+    squares: squares.map(s => ({x: s.x, y: s.y, dx: s.dx, dy: s.dy})),
+    triangles: triangles.map(t => ({x: t.x, y: t.y, dx: t.dx, dy: t.dy}))
+
   };
   localStorage.setItem("clickerSave", JSON.stringify(saveData));
 }
 
-function loadGame() {
+function loadGame() {                   //LOAD GAME
   const saved = JSON.parse(localStorage.getItem("clickerSave"));
   if (saved) {
     score = saved.score || 0;
@@ -220,14 +367,28 @@ function loadGame() {
     autoClickerCost = saved.autoClickerCost || 50;
     ballSpawnerCount = saved.ballSpawnerCount || 1;
     ballSpawnerCost = saved.ballSpawnerCost || 200;
+    squareSpawnerCount = saved.squareSpawnerCount || 0;
+    squareSpawnerCost = saved.squareSpawnerCost || 200;
     ballValue = saved.ballValue || 1;
     ballValueCost = saved.ballValueCost || 500;
+    triangles = [];
+    if (saved.triangles && saved.triangles.length > 0) {
+      saved.triangles.forEach(t => triangles.push(new Triangle(t.x, t.y, t.dx, t.dy)));
+    }
+
 
     balls = [];
     if (saved.balls && saved.balls.length > 0) {
       saved.balls.forEach(b => balls.push(new Ball(b.x, b.y, b.dx, b.dy)));
     } else {
       for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
+    }
+
+    squares = [];
+    if (saved.squares && saved.squares.length > 0) {
+      saved.squares.forEach(s => squares.push(new Square(s.x, s.y, s.dx, s.dy)));
+    } else {
+      for (let i = 0; i < squareSpawnerCount; i++) squares.push(new Square());
     }
   } else {
     for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
@@ -236,34 +397,39 @@ function loadGame() {
   updateScore();
 }
 
-function restartGame() {
+function restartGame() {                //RESTART GAME
   score = 0;
   pointsPerClick = 1;
   upgradeCost = 10;
   autoClickerLevel = 1;
   autoClickerCost = 50;
-  ballSpawnerCount = 1;
+
+  ballSpawnerCount = 0;
   ballSpawnerCost = 200;
+
+  squareSpawnerCount = 0;
+  squareSpawnerCost = 200;
+
+  triangleSpawnerCount = 0;
+  triangleSpawnerCost = 500
+
   ballValue = 1;
-  ballValueCost = 500;
+  squareValue = 2;
+  triangleValue = 5;
+  ballValueCost = 1000;
 
-  balls.forEach(b => b.el?.remove()); // remove any existing balls
-  balls = [new Ball()]; // start with 1 ball
+  balls = [];
+  squares = [];
+  triangles = []
 
-  updateShop();
+  updateShop(); 
   updateScore();
   saveGame();
 }
 
-// Game loop
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  balls.forEach(ball => { ball.update(); ball.draw(); });
-  requestAnimationFrame(gameLoop);
-}
-
-loadGame();
-gameLoop();
+// Init
+loadGame();                   
+animate();                      //END OF JAVASCRIPT
 </script>
 </body>
 </html>
