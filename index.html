@@ -1,201 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clicker Game</title>
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: linear-gradient(to right, #74ebd5, #acb6e5);
-      font-family: Arial, sans-serif;
-    }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 20px;
-    }
-    h2 {
-        font-size: 0.5rem;
-    }
-    #score, #cps {
-      font-size: 1.5rem;
-      margin: 10px;
-      font-weight: bold;
-    }
-    button {
-      padding: 15px 30px;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 10px;
-      background: #ff6f61;
-      color: white;
-      cursor: pointer;
-      margin: 5px;
-      transition: transform 0.1s ease, background 0.2s;
-    }
-    button:hover {
-      background: #ff4b3e;
-    }
-    button:active {
-      transform: scale(0.9);
-    }
-    .shop {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clicker Game with Bouncing Balls & Save</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(to right, #74ebd5, #acb6e5);
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    margin: 0;
+  }
+  h1 { font-size: 2rem; margin: 10px; }
+  #score, #cps { font-size: 1.5rem; margin: 10px; font-weight: bold; }
+  button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    background: #ff6f61;
+    color: white;
+    cursor: pointer;
+    margin: 5px;
+    transition: transform 0.1s ease, background 0.2s;
+  }
+  button:hover { background: #ff4b3e; }
+  button:active { transform: scale(0.9); }
+  .shop { margin-top: 10px; display: flex; flex-direction: column; align-items: center; }
+  canvas { position: absolute; top: 0; left: 0; z-index: -1; }
+</style>
 </head>
 <body>
-  <h1>Clicker Game</h1>
-  <h2> (if you get to 5000 score you win!)</h2>
-  <div id="score">Score: 0</div>
-  <button onclick="addPoint()">Click Me!</button>
-  <div id="cps">CPS: 0</div>
 
-  <div class="shop">
-    <h2>Shop</h2>
-    <button id="upgradeBtn" onclick="buyUpgrade()">Upgrade Click (+1) — Cost: 10</button>
-    <button id="autoClickerBtn" onclick="buyAutoClicker()">Buy Auto-Clicker (+1/sec) — Cost: 50</button>
-    <button id="autoClicker2Btn" onclick="buyAutoClicker2()">Buy Auto-Clicker 2 (+5/sec) — Cost: 200</button>
-  </div>
+<h1>Clicker Game</h1>
+<div id="score">Score: 0</div>
+<button onclick="addPoint()">Click Me!</button>
+<div id="cps">CPS: 0</div>
 
-  <script>
-    let score = 0;
-    let pointsPerClick = 1;
-    let upgradeCost = 10;
+<div class="shop">
+  <h2>Shop</h2>
+  <button id="upgradeBtn" onclick="buyUpgrade()">Upgrade Click (+1) — Cost: 10</button>
+  <button id="autoClickerBtn" onclick="buyAutoClicker()">Upgrade Ball Speed — Cost: 50</button>
+  <button id="ballSpawnerBtn" onclick="buyBallSpawner()">Add Ball — Cost: 200</button>
+  <button id="ballValueBtn" onclick="buyBallValue()">Increase Ball Value — Cost: 500</button>
+  <button onclick="restartGame()">Restart Game</button>
 
-    let autoClickerCost = 50;
-    let autoClickers = 0;
+</div>
 
-    let autoClicker2Cost = 200;
-    let autoClickers2 = 0;
+<canvas id="gameCanvas"></canvas>
 
-    // Load saved game
-    function loadGame() {
-      const saved = JSON.parse(localStorage.getItem("clickerSave"));
-      if (saved) {
-        score = saved.score || 0;
-        pointsPerClick = saved.pointsPerClick || 1;
-        upgradeCost = saved.upgradeCost || 10;
+<script>
+let score = 0;
+let pointsPerClick = 1;
+let upgradeCost = 10;
 
-        autoClickerCost = saved.autoClickerCost || 50;
-        autoClickers = saved.autoClickers || 0;
+let autoClickerLevel = 1;
+let autoClickerCost = 50;
 
-        autoClicker2Cost = saved.autoClicker2Cost || 200;
-        autoClickers2 = saved.autoClickers2 || 0;
-      }
-      updateScore();
-      updateShop();
-    }
+let ballSpawnerCount = 1;
+let ballSpawnerCost = 200;
 
-    // Save game
-    function saveGame() {
-      const saveData = {
-        score,
-        pointsPerClick,
-        upgradeCost,
-        autoClickerCost,
-        autoClickers,
-        autoClicker2Cost,
-        autoClickers2
-      };
-      localStorage.setItem("clickerSave", JSON.stringify(saveData));
-    }
+let ballValue = 1;
+let ballValueCost = 500;
 
-    function updateScore() {
-      const cps = autoClickers * 1 + autoClickers2 * 5;
-      document.getElementById("score").innerText = "Score: " + score;
-      document.getElementById("cps").innerText = "CPS: " + cps;
-      saveGame();
-    }
+let balls = [];
 
-    function addPoint() {
-      score += pointsPerClick;
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+class Ball {
+  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+    this.x = x;
+    this.y = y;
+    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel;
+    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel;
+    this.radius = 15;
+  }
+
+  update() {
+    this.x += this.dx;
+    this.y += this.dy;
+
+    if (this.x <= 0 || this.x >= canvas.width) {
+      this.dx *= -1;
+      score += ballValue;
       updateScore();
     }
-
-    function buyUpgrade() {
-      if (score >= upgradeCost) {
-        score -= upgradeCost;
-        pointsPerClick++;
-        upgradeCost = Math.floor(upgradeCost * 1.3);
-        updateShop();
-        updateScore();
-      } else {
-        alert("Not enough points!");
-      }
+    if (this.y <= 0 || this.y >= canvas.height) {
+      this.dy *= -1;
+      score += ballValue;
+      updateScore();
     }
+  }
 
-    function buyAutoClicker() {
-      if (score >= autoClickerCost) {
-        score -= autoClickerCost;
-        autoClickers++;
-        autoClickerCost = Math.floor(autoClickerCost * 1.5);
-        updateShop();
-        updateScore();
-      } else {
-        alert("Not enough points!");
-      }
-    }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff6f61";
+    ctx.fill();
+    ctx.closePath();
+  }
+}
 
-    function buyAutoClicker2() {
-      if (score >= autoClicker2Cost) {
-        score -= autoClicker2Cost;
-        autoClickers2++;
-        autoClicker2Cost = Math.floor(autoClicker2Cost * 1.5);
-        updateShop();
-        updateScore();
-      } else {
-        alert("Not enough points!");
-      }
-    }
+// Functions for click and upgrades
+function addPoint() { score += pointsPerClick; updateScore(); }
 
-    function updateShop() {
-      document.getElementById("upgradeBtn").innerText =
-        "Upgrade Click (+" + pointsPerClick + ") — Cost: " + upgradeCost;
-      document.getElementById("autoClickerBtn").innerText =
-        "Buy Auto-Clicker (+" + autoClickers + "/sec) — Cost: " + autoClickerCost;
-      document.getElementById("autoClicker2Btn").innerText =
-        "Buy Auto-Clicker 2 (+" + autoClickers2 * 5 + "/sec) — Cost: " + autoClicker2Cost;
-    }
-        function endGame() {
-    // Reset everything
-    score = 0;
-    pointsPerClick = 1;
-    upgradeCost = 10;
-    autoClickers = 0;
-    autoClickerCost = 50;
-    autoClickers2 = 0;
-    autoClicker2Cost = 200;
-
-    updateScore();
+function buyUpgrade() {
+  if (score >= upgradeCost) {
+    score -= upgradeCost;
+    pointsPerClick++;
+    upgradeCost = Math.floor(upgradeCost * 1.05);
     updateShop();
-    saveGame(); // make sure save resets too
-    }
+    updateScore();
+  }
+}
 
-    // Auto income
-    setInterval(() => {
-    const income = autoClickers * 1 + autoClickers2 * 5;
-    if (income > 0) {
-        score += income;
-        updateScore();
-    }
+function buyAutoClicker() {
+  if (score >= autoClickerCost) {
+    score -= autoClickerCost;
+    autoClickerLevel++;
+    autoClickerCost = Math.floor(autoClickerCost * 1.5);
+    balls.forEach(ball => { ball.dx *= 1.2; ball.dy *= 1.2; });
+    updateShop();
+    updateScore();
+  }
+}
 
-    // End game condition
-    if (score >= 5000) { // or income if you want CPS based
-        alert("🎉 Congratulations! You reached 5000 points!");
-        endGame();
-    }
-    }, 1000);
+function buyBallSpawner() {
+  if (score >= ballSpawnerCost) {
+    score -= ballSpawnerCost;
+    ballSpawnerCount++;
+    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.01);
+    balls.push(new Ball());
+    updateShop();
+    updateScore();
+  }
+}
 
-    // Initialize
-    loadGame();
-  </script>
+function buyBallValue() {
+  if (score >= ballValueCost) {
+    score -= ballValueCost;
+    ballValue++;
+    ballValueCost = Math.floor(ballValueCost * 2);
+    updateShop();
+    updateScore();
+  }
+}
+
+function updateShop() {
+  document.getElementById("upgradeBtn").innerText = "Upgrade Click (+" + pointsPerClick + ") — Cost: " + upgradeCost;
+  document.getElementById("autoClickerBtn").innerText = "Upgrade Ball Speed (Lv " + autoClickerLevel + ") — Cost: " + autoClickerCost;
+  document.getElementById("ballSpawnerBtn").innerText = "Add Ball (Now " + ballSpawnerCount + ") — Cost: " + ballSpawnerCost;
+  document.getElementById("ballValueBtn").innerText = "Increase Ball Value (Now " + ballValue + ") — Cost: " + ballValueCost;
+}
+
+function updateScore() {
+  document.getElementById("score").innerText = "Score: " + score;
+  document.getElementById("cps").innerText = "Balls: " + balls.length + " | Speed Lv: " + autoClickerLevel + " | Ball Value: " + ballValue;
+  saveGame();
+}
+
+// SAVE / LOAD
+function saveGame() {
+  const saveData = {
+    score, pointsPerClick, upgradeCost,
+    autoClickerLevel, autoClickerCost,
+    ballSpawnerCount, ballSpawnerCost,
+    ballValue, ballValueCost,
+    balls: balls.map(b => ({x: b.x, y: b.y, dx: b.dx, dy: b.dy}))
+  };
+  localStorage.setItem("clickerSave", JSON.stringify(saveData));
+}
+
+function loadGame() {
+  const saved = JSON.parse(localStorage.getItem("clickerSave"));
+  if (saved) {
+    score = saved.score || 0;
+    pointsPerClick = saved.pointsPerClick || 1;
+    upgradeCost = saved.upgradeCost || 10;
+    autoClickerLevel = saved.autoClickerLevel || 1;
+    autoClickerCost = saved.autoClickerCost || 50;
+    ballSpawnerCount = saved.ballSpawnerCount || 1;
+    ballSpawnerCost = saved.ballSpawnerCost || 200;
+    ballValue = saved.ballValue || 1;
+    ballValueCost = saved.ballValueCost || 500;
+
+    balls = [];
+    if (saved.balls && saved.balls.length > 0) {
+      saved.balls.forEach(b => balls.push(new Ball(b.x, b.y, b.dx, b.dy)));
+    } else {
+      for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
+    }
+  } else {
+    for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
+  }
+  updateShop();
+  updateScore();
+}
+
+function restartGame() {
+  score = 0;
+  pointsPerClick = 1;
+  upgradeCost = 10;
+  autoClickerLevel = 1;
+  autoClickerCost = 50;
+  ballSpawnerCount = 1;
+  ballSpawnerCost = 200;
+  ballValue = 1;
+  ballValueCost = 500;
+
+  balls.forEach(b => b.el?.remove()); // remove any existing balls
+  balls = [new Ball()]; // start with 1 ball
+
+  updateShop();
+  updateScore();
+  saveGame();
+}
+
+// Game loop
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  balls.forEach(ball => { ball.update(); ball.draw(); });
+  requestAnimationFrame(gameLoop);
+}
+
+loadGame();
+gameLoop();
+</script>
 </body>
 </html>
