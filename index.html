@@ -73,6 +73,7 @@ let balls = [];
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -87,6 +88,31 @@ class Ball {
     this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel;
     this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel;
     this.radius = 15;
+  }
+
+  update() {
+    this.x += this.dx;
+    this.y += this.dy;
+
+    if (this.x <= 0 || this.x >= canvas.width) {
+      this.dx *= -1;
+      score += ballValue;
+      updateScore();
+    }
+    if (this.y <= 0 || this.y >= canvas.height) {
+      this.dy *= -1;
+      score += ballValue;
+      updateScore();
+    }
+  }
+}
+  class Square {
+  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+    this.x = x;
+    this.y = y;
+    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel;
+    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel;
+    this.radius = 10;
   }
 
   update() {
