@@ -124,6 +124,7 @@ let ballValueCost = 1000;
 let balls = [];
 let squares = [];
 let triangles = [];
+let popups = [];
 
 let rebirthCost = 100000;
 let growingCostMulti = 1.5;
@@ -135,7 +136,7 @@ const output = document.getElementById("output");
 button.addEventListener("click", () => {                                                                             //cheat codes!!!!
   let value = Number(input.value);
   if (value === 69420) {
-    score += 10000000;
+    score += 1e300;
     updateScore();
   }
   input.value = "";
@@ -151,7 +152,33 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-class Ball {                    //START OF CLASSES!!!!!!!!!
+class Popup {
+  constructor(x, y, value) {
+    this.x = x;
+    this.y = y;
+    this.value = value;
+    this.alpha = 1;
+    this.dy = -1.5; // moves up
+    this.fontSize = 20; // start font size
+  }
+
+  update() {
+    this.y += this.dy;
+    this.alpha -= 0.02; // fade out
+    this.fontSize += 0.3; // optional: grow effect
+  }
+
+  draw() {
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = "red";
+    ctx.font = `${this.fontSize}px Arial`;
+    ctx.fillText("+" + Math.floor(this.value), this.x, this.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ----- BALL -----
+class Ball {
   constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
     this.x = x;
     this.y = y;
@@ -166,12 +193,16 @@ class Ball {                    //START OF CLASSES!!!!!!!!!
 
     if (this.x <= 0 || this.x >= canvas.width) {
       this.dx *= -1;
-      score += (ballValue * multi);
+      let gained = ballValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
     if (this.y <= 0 || this.y >= canvas.height) {
       this.dy *= -1;
-      score += (ballValue * multi);
+      let gained = ballValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
   }
@@ -185,6 +216,7 @@ class Ball {                    //START OF CLASSES!!!!!!!!!
   }
 }
 
+// ----- SQUARE -----
 class Square {
   constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
     this.x = x;
@@ -200,12 +232,16 @@ class Square {
 
     if (this.x <= 0 || this.x + this.size >= canvas.width) {
       this.dx *= -1;
-      score += squareValue;
+      let gained = squareValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
     if (this.y <= 0 || this.y + this.size >= canvas.height) {
       this.dy *= -1;
-      score += squareValue;
+      let gained = squareValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
   }
@@ -216,13 +252,14 @@ class Square {
   }
 }
 
+// ----- TRIANGLE -----
 class Triangle {
   constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
     this.x = x;
     this.y = y;
     this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 2;
     this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel * 2;
-    this.size = 30; // 👈 side length
+    this.size = 30; // side length
   }
 
   update() {
@@ -231,28 +268,33 @@ class Triangle {
 
     if (this.x <= 0 || this.x + this.size >= canvas.width) {
       this.dx *= -1;
-      score += triangleValue;
+      let gained = triangleValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
     if (this.y <= 0 || this.y + this.size >= canvas.height) {
       this.dy *= -1;
-      score += triangleValue;
+      let gained = triangleValue * multi;
+      score += gained;
+      popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
   }
 
   draw() {
-    ctx.fillStyle = "#ffa500"; // orange
+    ctx.fillStyle = "#ffa500";
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);                        // top point
     ctx.lineTo(this.x - this.size / 2, this.y + this.size);
-    ctx.lineTo(this.x + this.size / 2, this.y + this.size);;
+    ctx.lineTo(this.x + this.size / 2, this.y + this.size);
     ctx.closePath();
     ctx.fill();
   }
 }
 
-                                        // Click + upgrades               //ENDD OF  CLASSES!!!!!
+
+                                        // Click + upgrades            //ENDD OF  CLASSES!!!!!
 function addPoint() { 
   score += (pointsPerClick * multi);
   updateScore(); 
@@ -342,6 +384,12 @@ function animate() {                  //ANIMATION!
   triangles.forEach(triangle => {
     triangle.update();
     triangle.draw();
+  });
+
+  popups.forEach((p, index) => {
+  p.update();
+  p.draw();
+  if (p.alpha <= 0) popups.splice(index, 1);
   });
 
   requestAnimationFrame(animate);
@@ -464,6 +512,7 @@ function wait(ms) {       //wait function
 
 async function rebirth() {
   if (score >= rebirthCost) { // check cost
+    multi += 1;
                                   //the ffing andimation lol!dfsd
   const multiEl = document.getElementById("multiplier");
   multiEl.classList.add("animate-multi");
@@ -489,7 +538,6 @@ async function rebirth() {
     squares = [];
     triangles = [];
 
-    multi += 1;
     let newRebirthCost = rebirthCost * growingCostMulti;
     if (newRebirthCost < 1000000) {
       growingCostMulti *= 1.2;
@@ -513,6 +561,7 @@ async function rebirth() {
     saveGame();
   }
 }
+
 function getRandom(min, max) {       //random number function!!!!
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
