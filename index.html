@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clicker Game with Balls & Squares</title>
 <style>
   body {
     display: flex;
@@ -16,9 +15,42 @@
     overflow: hidden;
     margin: 0;
   }
-  h1 { font-size: 2rem; margin: 10px; }
-  #score, #cps { font-size: 1.5rem; margin: 10px; font-weight: bold; }
-  button {
+  h1 { 
+    font-size: 5rem; 
+    margin: 10px; 
+  }
+  #score {
+    font-size: 2rem;
+    font-weight: bolder;
+    padding: 20px;
+  }
+  #multiplier {
+    position: absolute;
+    font-size: 1.3rem;
+    color: red;
+    top: 205px;
+    font-weight: normal;
+  }
+
+  @keyframes popEffect {
+  0% { transform: scale(1); color: red; font-size: 2.5rem; font-weight: bold;}
+  50% { transform: scale(12); color: gold; text-shadow: 0 0 15px gold; font-size: 3rem; font-weight: bolder;}
+  100% { transform: scale(1); color: red; text-shadow: none; font-size: 2rem; font-weight: normal;}
+}
+
+.animate-multi {
+  animation: popEffect 1s ease;
+}
+
+  #cps { 
+
+    font-size: 1.5rem; 
+    margin: 10px; 
+    font-weight: bold; 
+    color: green;
+
+  }
+  button {            
     padding: 10px 20px;
     font-size: 1rem;
     border: none;
@@ -37,28 +69,39 @@
 </head>
 <body>
 
-<h1>Clicker Game</h1>
-<div id="score">Score: 0</div>
+<h1>Shape Clicker</h1>
+<div id="score"> Score: 0</div> 
+<div id="multiplier">×1</div>
+
 <button onclick="addPoint()">Click Me!</button>
 <div id="cps">CPS: 0</div>
 
 <div class="shop">
   <h2>Shop</h2>
   <button id="upgradeBtn" onclick="buyUpgrade()">Upgrade Click (+1) — Cost: 10</button>
-  <button id="autoClickerBtn" onclick="buyAutoClicker()">Upgrade Speed — Cost: 100</button>
-  <button id="ballSpawnerBtn" onclick="buyBallSpawner()">Add Ball — Cost: 200</button>
+  <button id="autoClickerBtn" onclick="buyAutoClicker()">Upgrade Speed — Cost: 50</button>
+  <button id="ballSpawnerBtn" onclick="buyBallSpawner()">Add Ball — Cost: 100</button>
   <button id="squareSpawnerBtn" onclick="buySquareSpawner()">Add Square — Cost: 200</button>
   <button id="triangleSpawnerBtn" onclick="buyTriangleSpawner()">Add Triangle — Cost: 500</button>
   <button id="ballValueBtn" onclick="buyBallValue()">Increase Value — Cost: 1000</button>
+  <button id="rebirth" onclick="rebirth()">REBIRTH — COST: 1000000</button>
   <button onclick="restartGame()">Restart Game</button>
+</div>
+
+<div id="sidebar">
+  <label for="num">Enter a Number for Gifts!</label>
+  <input type="number" id="num" placeholder="Type a number">
+  <button id="submit">Submit</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
+
 <script>  //start of javascript     variables!!!!!!!
-let score = 0;
+let score = 1;
 let pointsPerClick = 1;
 let upgradeCost = 10;
+let multi = 1;
 
 let autoClickerLevel = 1;
 let autoClickerCost = 100;
@@ -73,9 +116,7 @@ let triangleSpawnerCount = 0;
 let triangleSpawnerCost = 500;
 
 let ballValue = 1;
-
 let squareValue = 2;
-
 let triangleValue = 5;
 
 let ballValueCost = 1000;
@@ -83,6 +124,22 @@ let ballValueCost = 1000;
 let balls = [];
 let squares = [];
 let triangles = [];
+
+let rebirthCost = 100000;
+let growingCostMulti = 1.5;
+
+const input = document.getElementById("num");
+const button = document.getElementById("submit");
+const output = document.getElementById("output");
+
+button.addEventListener("click", () => {                                                                             //cheat codes!!!!
+  let value = Number(input.value);
+  if (value === 69420) {
+    score += 10000000;
+    updateScore();
+  }
+  input.value = "";
+});
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -109,12 +166,12 @@ class Ball {                    //START OF CLASSES!!!!!!!!!
 
     if (this.x <= 0 || this.x >= canvas.width) {
       this.dx *= -1;
-      score += ballValue;
+      score += (ballValue * multi);
       updateScore();
     }
     if (this.y <= 0 || this.y >= canvas.height) {
       this.dy *= -1;
-      score += ballValue;
+      score += (ballValue * multi);
       updateScore();
     }
   }
@@ -195,44 +252,11 @@ class Triangle {
   }
 }
 
-class Star {
-  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
-    this.x = x;
-    this.y = y;
-    this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 2;
-    this.dy = dy !== null ? dy : (Math.random() * 2 - 1) * autoClickerLevel * 2;
-    this.size = 30; // 👈 side length
-  }
-
-  update() {
-    this.x += this.dx;
-    this.y += this.dy;
-
-    if (this.x <= 0 || this.x + this.size >= canvas.width) {
-      this.dx *= -1;
-      score += triangleValue;
-      updateScore();
-    }
-    if (this.y <= 0 || this.y + this.size >= canvas.height) {
-      this.dy *= -1;
-      score += triangleValue;
-      updateScore();
-    }
-  }
-
-  draw() {
-    ctx.fillStyle = "#ffa500"; // orange
-    ctx.beginPath();
-    ctx.moveTo(this.x, this.y);                        // top point
-    ctx.lineTo(this.x - this.size / 2, this.y + this.size); // bottom left
-    ctx.lineTo(this.x + this.size / 2, this.y + this.size); // bottom right
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
                                         // Click + upgrades               //ENDD OF  CLASSES!!!!!
-function addPoint() { score += pointsPerClick; updateScore(); }
+function addPoint() { 
+  score += (pointsPerClick * multi);
+  updateScore(); 
+}
 
 function buyUpgrade() {                   //UPGRADE CLICK
   if (score >= upgradeCost) {
@@ -248,7 +272,7 @@ function buyAutoClicker() {             //upgrade speed!
   if (score >= autoClickerCost) {
     score -= autoClickerCost;
     autoClickerLevel++;
-    autoClickerCost = Math.floor(autoClickerCost * 1.3);
+    autoClickerCost = Math.floor(autoClickerCost * 1.4);
     balls.forEach(b => { b.dx *= 1.2; b.dy *= 1.2; });
     squares.forEach(s => { s.dx *= 1.2; s.dy *= 1.2; });
     updateShop();
@@ -260,7 +284,7 @@ function buyBallSpawner() {                 //more balls!
   if (score >= ballSpawnerCost) {
     score -= ballSpawnerCost;
     ballSpawnerCount++;
-    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.25);
+    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.15);
     balls.push(new Ball());
     updateShop();
     updateScore();
@@ -271,7 +295,7 @@ function buySquareSpawner() {               //MORE SQUARES
   if (score >= squareSpawnerCost) {
     score -= squareSpawnerCost;
     squareSpawnerCount++;
-    squareSpawnerCost = Math.floor(squareSpawnerCost * 1.3);
+    squareSpawnerCost = Math.floor(squareSpawnerCost * 1.25);
     squares.push(new Square());
     updateShop();
     updateScore();
@@ -282,7 +306,7 @@ function buyTriangleSpawner() {           //MORE TRIANGLES
   if (score >= triangleSpawnerCost) {
     score -= triangleSpawnerCost;
     triangleSpawnerCount++;
-    triangleSpawnerCost = Math.floor(triangleSpawnerCost * 1.35);
+    triangleSpawnerCost = Math.floor(triangleSpawnerCost * 1.3);
     triangles.push(new Triangle());
     updateShop();
     updateScore();
@@ -295,7 +319,7 @@ function buyBallValue() {           //mORE VALUE LETS GO BABY!
     ballValue++;
     squareValue += 2;
     triangleValue += 5;
-    ballValueCost = Math.floor(ballValueCost * 1.9);
+    ballValueCost = Math.floor(ballValueCost * 1.8);
     updateShop();
     updateScore();
   }
@@ -307,16 +331,18 @@ function animate() {                  //ANIMATION!
 
   balls.forEach(ball => { 
     ball.update(); 
-    ball.draw(); });
+    ball.draw(); 
+  });
 
   squares.forEach(square => { 
     square.update(); 
-    square.draw(); });
+    square.draw(); 
+  });
 
   triangles.forEach(triangle => {
     triangle.update();
     triangle.draw();
-});
+  });
 
   requestAnimationFrame(animate);
 }
@@ -328,16 +354,12 @@ function updateShop() {           //UPDATE THE SHOP
   document.getElementById("squareSpawnerBtn").innerText = "Add Square (Now " + squareSpawnerCount + ") — Cost: " + squareSpawnerCost;
   document.getElementById("ballValueBtn").innerText = "Increase Value (Now " + ballValue + ") — Cost: " + ballValueCost;
   document.getElementById("triangleSpawnerBtn").innerText = "Add Triangle (Now " + triangleSpawnerCount + ") — Cost: " + triangleSpawnerCost;
-
-}
+  document.getElementById("rebirth").innerText = "REBIRTH (Multi:  " + multi + ") — Cost: " + rebirthCost;
+} 
 
 function updateScore() {                    //UPDATE SCORE!
-  document.getElementById("score").innerText = "Score: " + score;
-  document.getElementById("cps").innerText =
-    "Balls: " + balls.length +
-    " | Squares: " + squares.length +
-    " | Speed Lv: " + autoClickerLevel +
-    " | Value: " + ballValue;
+  document.getElementById("score").innerText = "Score: " + Math.floor(score); 
+  document.getElementById("multiplier").innerText = "×" + multi;
   saveGame();
 }
 
@@ -351,8 +373,8 @@ function saveGame() {                         //SAVE GAME
     ballValue, ballValueCost,
     balls: balls.map(b => ({x: b.x, y: b.y, dx: b.dx, dy: b.dy})),
     squares: squares.map(s => ({x: s.x, y: s.y, dx: s.dx, dy: s.dy})),
-    triangles: triangles.map(t => ({x: t.x, y: t.y, dx: t.dx, dy: t.dy}))
-
+    triangles: triangles.map(t => ({x: t.x, y: t.y, dx: t.dx, dy: t.dy})),
+    multi, rebirthCost, growingCostMulti
   };
   localStorage.setItem("clickerSave", JSON.stringify(saveData));
 }
@@ -371,11 +393,14 @@ function loadGame() {                   //LOAD GAME
     squareSpawnerCost = saved.squareSpawnerCost || 200;
     ballValue = saved.ballValue || 1;
     ballValueCost = saved.ballValueCost || 500;
+    multi = saved.multi || 1;
+    rebirthCost = saved.rebirthCost || 1000000;
+    growingCostMulti = saved.growingCostMulti || 1.5;
+
     triangles = [];
     if (saved.triangles && saved.triangles.length > 0) {
       saved.triangles.forEach(t => triangles.push(new Triangle(t.x, t.y, t.dx, t.dy)));
     }
-
 
     balls = [];
     if (saved.balls && saved.balls.length > 0) {
@@ -397,7 +422,8 @@ function loadGame() {                   //LOAD GAME
   updateScore();
 }
 
-function restartGame() {                //RESTART GAME
+function restartGame() {      
+  multi = 1;          //RESTART GAME
   score = 0;
   pointsPerClick = 1;
   upgradeCost = 10;
@@ -405,7 +431,7 @@ function restartGame() {                //RESTART GAME
   autoClickerCost = 50;
 
   ballSpawnerCount = 0;
-  ballSpawnerCost = 200;
+  ballSpawnerCost = 100;
 
   squareSpawnerCount = 0;
   squareSpawnerCost = 200;
@@ -422,14 +448,77 @@ function restartGame() {                //RESTART GAME
   squares = [];
   triangles = []
 
+  growingCostMulti = 1.5;
+  rebirthCost = 100000
+
   updateShop(); 
   updateScore();
   saveGame();
 }
 
-// Init
+//                                    CUSTOM STUFF!
+
+function wait(ms) {       //wait function
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function rebirth() {
+  if (score >= rebirthCost) { // check cost
+                                  //the ffing andimation lol!dfsd
+  const multiEl = document.getElementById("multiplier");
+  multiEl.classList.add("animate-multi");
+  setTimeout(() => multiEl.classList.remove("animate-multi"), 1005);
+
+  let cur_score = score;
+  
+  while (score > 0) {
+    score -= getRandom(0.001 * cur_score, 0.01 * cur_score);
+    updateScore();
+    if (score < 0) 
+      score = 0;
+      updateScore();
+      await wait(1);
+  }
+    score = 0;
+    cur_score = 0;
+    pointsPerClick = 1;
+    ballSpawnerCount = 0;
+    squareSpawnerCount = 0;
+    triangleSpawnerCount = 0;
+    balls = [];
+    squares = [];
+    triangles = [];
+
+    multi += 1;
+    let newRebirthCost = rebirthCost * growingCostMulti;
+    if (newRebirthCost < 1000000) {
+      growingCostMulti *= 1.2;
+    }
+    if (newRebirthCost >= 1000000 && newRebirthCost < 10000000) {
+      growingCostMulti *= 1.05;
+    }
+    if (newRebirthCost >= 10000000 < 100000000) {
+      growingCostMulti *= 1.01;
+    }
+    else {
+      growingCostMulti *= 1.001
+    }
+    rebirthCost = Math.floor(newRebirthCost);
+
+    updateShop();
+    updateScore();
+
+
+
+    saveGame();
+  }
+}
+function getRandom(min, max) {       //random number function!!!!
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+
 loadGame();                   
 animate();                      //END OF JAVASCRIPT
 </script>
-</body>
-</html>
