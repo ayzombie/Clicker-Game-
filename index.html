@@ -7,12 +7,11 @@
   body {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: top;
     align-items: center;
-    height: 100vh;
+    min-height: 200vh;
     background: linear-gradient(to right, #74ebd5, #acb6e5);
     font-family: Arial, sans-serif;
-    overflow: hidden;
     margin: 0;
   }
   h1 { 
@@ -25,12 +24,73 @@
     padding: 20px;
   }
   #multiplier {
-    position: absolute;
     font-size: 1.3rem;
     color: red;
-    top: 205px;
     font-weight: normal;
   }
+
+  #MoreUpgradesButton{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: green;
+    background-color: white;
+  }
+
+  .raindrop {
+    position: absolute;
+    width: 5px;
+    height: 10px;
+    background: blue;
+    top: 0;
+    border-radius: 50%;
+  }
+  .raindrop2 {
+    position: absolute;
+    font-size: 2rem;
+    color: #00b4d8;
+    cursor: pointer;
+    animation: fall 3s linear forwards;
+  }
+
+  @keyframes fall {
+    from { transform: translateY(-50px); opacity: 1; }
+    to { transform: translateY(500px); opacity: 0; }
+  }
+
+  #rain {
+    position: absolute;
+    top: 1100px;
+  }
+  #snakeBtn {
+    position: absolute;
+    top: 1100px;
+    pointer-events: none;
+  }
+  #critBtn {
+    position: absolute;
+    top: 1100px;
+    pointer-events: none;
+  }
+  
+  @keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+  }
+  @keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+  }
+
+  .fade {
+    animation: fadeOut 1s forwards; /* 1 second fade */
+  }
+
+  .fadein {
+    animation: fadeIn 1s forwards; /* 1 second fade in */
+  }
+
+
 
   @keyframes popEffect {
   0% { transform: scale(1); color: red; font-size: 2.5rem; font-weight: bold;}
@@ -38,12 +98,42 @@
   100% { transform: scale(1); color: red; text-shadow: none; font-size: 2rem; font-weight: normal;}
 }
 
+@keyframes critBounce {
+  0%   { transform: scale(1); color: red; }
+  25%  { transform: scale(3); color: gold; }
+  50%  { transform: scale(1); color: red; } 
+  75%  { transform: scale(3); color: gold; }
+  100% { transform: scale(1); color: red; }
+}
+
+.animate-crit-bounce {
+  animation: critBounce 1.5s ease-in-out forwards;
+}
+
+
+
+@keyframes discountPopup {
+  0%   { transform: scale(0); opacity: 1; color: gold; font-size: 2rem; font-weight: bold; }
+  50%  { transform: scale(4); opacity: 1; color: red; text-shadow: 0 0 20px gold; font-size: 4rem; font-weight: bolder; }
+  100% { transform: scale(0); opacity: 0; color: gold; text-shadow: none; font-size: 1rem; font-weight: normal; }
+}
+
+.discount-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: discountPopup 0.85s ease-out forwards;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+
 .animate-multi {
   animation: popEffect 1s ease;
 }
 
   #cps { 
-
     font-size: 1.5rem; 
     margin: 10px; 
     font-weight: bold; 
@@ -70,13 +160,14 @@
 <body>
 
 <h1>Shape Clicker</h1>
+<div id="critDisplay" style="display:none;">Crit Chance: 0%</div>
 <div id="score"> Score: 0</div> 
 <div id="multiplier">×1</div>
 
 <button onclick="addPoint()">Click Me!</button>
-<a href="https://ayzombie.github.io/LAG-MACHINE/" target="_blank">
+<!-- <a href="https://ayzombie.github.io/LAG-MACHINE/" target="_blank">
   <button>click me for 69 quintillion score!</button>
-</a>
+</a> -->
 <div id="cps">CPS: 0</div>
 
 <div class="shop">
@@ -89,6 +180,7 @@
   <button id="ballValueBtn" onclick="buyBallValue()">Increase Value — Cost: 1000</button>
   <button id="rebirth" onclick="rebirth()">REBIRTH — COST: 1000000</button>
   <button onclick="restartGame()">Restart Game</button>
+
 </div>
 
 <div id="sidebar">
@@ -96,50 +188,102 @@
   <input type="number" id="num" placeholder="Type a number">
   <button id="submit">Submit</button>
 </div>
-
 <canvas id="gameCanvas"></canvas>
+
+<button id="waterPathBtn" onclick="waterPath()">Water Path</button>
+
+<button id="MoreUpgradesButton" onclick="showButtons()">More Upgrades</button>
+<button id="rain" onclick="buyRain()">Rain - Cost: 1000000</button>
+<button id="snakeBtn" onclick="buySnake()">Snake — Cost: 4000000</button>
+<button id="critBtn" onclick="buyCrit()">Critical Hit Chance — Cost: 10000</button>
+<button id="raindropBtn" onclick="buyRaindrop()">Raindrop Hit Chance — Cost: 5000000</button>
 
 
 <script>  //start of javascript     variables!!!!!!!
-let score = 1;
+if ('scrollRestoration' in history) {   // to go to top when start
+  history.scrollRestoration = 'manual';
+}
+
+window.onload = function() {
+  window.scrollTo(0, 0);
+};
+
+let score = 0;
+// CPS tracking (declare once)
+let cps = 0;
+let cpsHistory = [];
+let pointsThisInterval = 0; 
+// get the CPS element (your HTML uses id="cps")
+const cpsEl = document.getElementById("cps");
+
 let pointsPerClick = 1;
 let upgradeCost = 10;
-let multi = 1;
 
 let autoClickerLevel = 1;
-let autoClickerCost = 100;
+let autoClickerCost = 50;
 
 let ballSpawnerCount = 0;
-let ballSpawnerCost = 200;
+let ballSpawnerCost = 100;
+let squareValue = 2;
 
 let squareSpawnerCount = 0;
-let squareSpawnerCost = 500;
+let squareSpawnerCost = 200;
 
 let triangleSpawnerCount = 0;
 let triangleSpawnerCost = 500;
-
-let ballValue = 1;
-let squareValue = 2;
 let triangleValue = 5;
 
 let ballValueCost = 1000;
+let ballValue = 1;
 
 let balls = [];
 let squares = [];
 let triangles = [];
 let popups = [];
+let raindrops = [];
 
 let rebirthCost = 100000;
 let growingCostMulti = 1.5;
+let multi = 1;
+
+let pickedPath = false;
+
+let hasMoreUpgrades = false;
+let rainSpeed = 200;
+let boughtRain = false;
+let rainInterval = null;
+
+let snake = null;
+let boughtSnake = false;
+let snakeSpawnerCost = 4000000;
+
+let critChance = 0;      // starting crit chance in %
+let critMultiplier = 2;  // how much more points a crit gives
+let critUpgradeCost = 10000; // initial cost of the upgrade
+let critBought = false;
+
+let boughtRaindrop = false;
+
+let prestigeLevel = 0;        // how many times prestiged
+let prestigePoints = 0;       // total prestige points earned
+let prestigeBonus = 1;        // multiplier to everything from prestige
+let prestigeCost = 1e8;       // base cost to prestige (100 million, adjust as needed)
+
+document.getElementById("waterPathBtn").style.display = "none";
+
+document.getElementById("rain").style.display = "none";
+document.getElementById("snakeBtn").style.display = "none";
+document.getElementById("critBtn").style.display = "none";
+document.getElementById("MoreUpgradesButton").style.display = "none";
+document.getElementById("raindropBtn").style.display = "none";
 
 const input = document.getElementById("num");
 const button = document.getElementById("submit");
 const output = document.getElementById("output");
-
 button.addEventListener("click", () => {                                                                             //cheat codes!!!!
   let value = Number(input.value);
   if (value === 69420) {
-    score += 1e300;
+    score += 5000000;
     updateScore();
   }
   input.value = "";
@@ -148,13 +292,29 @@ button.addEventListener("click", () => {                                        
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+window.addEventListener("mousemove", e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+//cps
+  setInterval(() => {
+    cpsHistory.push(pointsThisInterval);
+    if (cpsHistory.length > 5) cpsHistory.shift(); // keep last 5 seconds
+    cps = pointsThisInterval * 2;
+    document.getElementById("cps").innerText = "CPS: " + cps;
+    pointsThisInterval = 0;
+  }, 500);
+
 function resizeCanvas() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.height = document.body.scrollHeight; // instead of window.innerHeight
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
+//popup thing
 class Popup {
   constructor(x, y, value) {
     this.x = x;
@@ -198,6 +358,7 @@ class Ball {
       this.dx *= -1;
       let gained = ballValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -205,6 +366,7 @@ class Ball {
       this.dy *= -1;
       let gained = ballValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -237,6 +399,7 @@ class Square {
       this.dx *= -1;
       let gained = squareValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -244,6 +407,7 @@ class Square {
       this.dy *= -1;
       let gained = squareValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -254,10 +418,13 @@ class Square {
     ctx.fillRect(this.x, this.y, this.size, this.size);
   }
 }
-
 // ----- TRIANGLE -----
 class Triangle {
-  constructor(x = Math.random() * canvas.width, y = Math.random() * canvas.height, dx = null, dy = null) {
+  constructor(
+    x = Math.random() * (canvas.width - 30) + 15,
+    y = Math.random() * (canvas.height - 30) + 15,
+    dx = null, dy = null) {
+
     this.x = x;
     this.y = y;
     this.dx = dx !== null ? dx : (Math.random() * 2 - 1) * autoClickerLevel * 2;
@@ -273,6 +440,7 @@ class Triangle {
       this.dx *= -1;
       let gained = triangleValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -280,6 +448,7 @@ class Triangle {
       this.dy *= -1;
       let gained = triangleValue * multi;
       score += gained;
+      pointsThisInterval += gained;
       popups.push(new Popup(this.x, this.y, gained));
       updateScore();
     }
@@ -295,19 +464,213 @@ class Triangle {
     ctx.fill();
   }
 }
+//. ------ RAINDROP THING -------
+class Raindrop {
+  constructor() {
+    this.x = Math.random() * canvas.width;
+    this.y = 0; // start at top
+    this.width = 5;
+    this.height = 10;
+    this.speed = Math.random() * 3 + 2; // 2-5 px per frame
+  }
 
+  update() {
+    this.y += this.speed;
+
+    // If raindrop hits the bottom
+    if (this.y + this.height >= canvas.height) {
+      const gained = 1 * multi;  // 1 point per drop, scaled by multiplier
+      score += gained;
+      pointsThisInterval += gained;
+      popups.push(new Popup(this.x, this.y, gained));
+      updateScore();
+      return false; // signal to remove this raindrop
+    }
+    return true; // keep raindrop in array
+  }
+
+  draw() {
+    ctx.fillStyle = "blue";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+}
+
+class Snake {
+  constructor() {
+    this.segments = [];
+    this.segmentSize = 14;
+    this.length = 20;
+    this.x = canvas.width / 2;
+    this.y = canvas.height / 2;
+    this.speed = 3;
+
+    // initialize body
+    for (let i = 0; i < this.length; i++) {
+      this.segments.push({ x: this.x - i * this.segmentSize, y: this.y });
+    }
+  }
+
+  update() {
+    // move toward mouse
+    let dx = mouse.x - this.x;
+    let dy = mouse.y - this.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 1) {
+      this.x += (dx / dist) * this.speed;
+      this.y += (dy / dist) * this.speed;
+    }
+
+    // body follows
+    this.segments.unshift({ x: this.x, y: this.y });
+    while (this.segments.length > this.length) {
+      this.segments.pop();
+    }
+
+    // check collisions with shapes
+    this.checkCollisions();
+  }
+
+  checkCollisions() {
+    const eatRange = this.segmentSize;
+
+    function overlaps(a, b, size) {
+      return (
+        a.x < b.x + size &&
+        a.x + size > b.x &&
+        a.y < b.y + size &&
+        a.y + size > b.y
+      );
+    }
+
+    // eat balls
+    balls = balls.filter(b => {
+      if (overlaps({x:this.x,y:this.y}, {x:b.x-b.radius,y:b.y-b.radius}, b.radius*2)) {
+        this.discountPrices();
+        return false; // remove ball
+      }
+      return true;
+    });
+
+    // eat squares
+    squares = squares.filter(s => {
+      if (overlaps({x:this.x,y:this.y}, {x:s.x,y:s.y}, s.size)) {
+        this.discountPrices();
+        return false;
+      }
+      return true;
+    });
+
+    // eat triangles (approx bounding box)
+    triangles = triangles.filter(t => {
+      if (overlaps({x:this.x,y:this.y}, {x:t.x-t.size/2,y:t.y}, t.size)) {
+        this.discountPrices();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  discountPrices() {
+    upgradeCost = Math.round(Math.max(1, upgradeCost * 0.995));
+    autoClickerCost = Math.round(Math.max(1, autoClickerCost * 0.995));
+    ballSpawnerCost = Math.round(Math.max(1, ballSpawnerCost * 0.995));
+    squareSpawnerCost = Math.round(Math.max(1, squareSpawnerCost * 0.995));
+    triangleSpawnerCost = Math.round(Math.max(1, triangleSpawnerCost * 0.995));
+    ballValueCost = Math.round(Math.max(1, ballValueCost * 0.995));
+    rebirthCost = Math.round(Math.max(1, rebirthCost * 0.995));
+    updateShop();
+
+    const popup = document.createElement("div");
+    popup.textContent = "-0.5%";
+    popup.className = "discount-popup";
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 1000);
+  }
+
+  draw(ctx) {
+    ctx.save(); // save canvas state
+
+    // Blue gradient body
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, "#1E90FF"); // light blue
+    gradient.addColorStop(1, "#104E8B"); // deep blue
+    ctx.fillStyle = gradient;
+
+    for (let i = 0; i < this.segments.length; i++) {
+      const { x, y } = this.segments[i];  // ✅ fixed
+
+      // Wave motion for serpentine look
+      const wave = Math.sin((Date.now() / 200) + i * 0.5) * 5;
+
+      if (i === 0) {
+        // Head
+        ctx.fillStyle = "#104E8B"; // darker head
+        ctx.beginPath();
+        ctx.arc(x + wave, y, this.segmentSize * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(x - 4, y - 4, 2, 0, Math.PI * 2);
+        ctx.arc(x + 4, y - 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = gradient; // reset for body
+      } else {
+        // Body ovals
+        ctx.beginPath();
+        ctx.ellipse(
+          x + wave,
+          y,
+          this.segmentSize,
+          this.segmentSize * 0.7,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+    }
+
+    ctx.restore(); // restore canvas state
+  }
+}
 
                                         // Click + upgrades            //ENDD OF  CLASSES!!!!!
-function addPoint() { 
-  score += (pointsPerClick * multi);
-  updateScore(); 
+function addPoint() {
+  if (boughtRaindrop == true) {
+    if (Math.random() < 0.01) {
+      spawnRaindrop();
+    }
+  }
+
+  let points = pointsPerClick * multi;
+
+  // Critical hit check
+  let isCrit = false;
+  if (Math.random() < 0.01) {
+    points *= critMultiplier;
+    isCrit = true;
+  }
+
+  score += points;
+  pointsThisInterval += points;
+
+  // Push numeric popup (don't overwrite .value with a string — see note below)
+  const popup = new Popup(mouse.x, mouse.y, points);
+  if (isCrit) popup.crit = true; // flag to draw differently (optional)
+  popups.push(popup);
+
+  updateScore();
 }
 
 function buyUpgrade() {                   //UPGRADE CLICK
   if (score >= upgradeCost) {
     score -= upgradeCost;
     pointsPerClick++;
-    upgradeCost = Math.floor(upgradeCost * 1.25);
+    upgradeCost = Math.floor(upgradeCost * 1.3);
     updateShop();
     updateScore();
   }
@@ -317,7 +680,7 @@ function buyAutoClicker() {             //upgrade speed!
   if (score >= autoClickerCost) {
     score -= autoClickerCost;
     autoClickerLevel++;
-    autoClickerCost = Math.floor(autoClickerCost * 1.4);
+    autoClickerCost = Math.floor(autoClickerCost * 1.35);
     balls.forEach(b => { b.dx *= 1.2; b.dy *= 1.2; });
     squares.forEach(s => { s.dx *= 1.2; s.dy *= 1.2; });
     updateShop();
@@ -329,7 +692,7 @@ function buyBallSpawner() {                 //more balls!
   if (score >= ballSpawnerCost) {
     score -= ballSpawnerCost;
     ballSpawnerCount++;
-    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.15);
+    ballSpawnerCost = Math.floor(ballSpawnerCost * 1.2);
     balls.push(new Ball());
     updateShop();
     updateScore();
@@ -340,7 +703,7 @@ function buySquareSpawner() {               //MORE SQUARES
   if (score >= squareSpawnerCost) {
     score -= squareSpawnerCost;
     squareSpawnerCount++;
-    squareSpawnerCost = Math.floor(squareSpawnerCost * 1.25);
+    squareSpawnerCost = Math.floor(squareSpawnerCost * 1.3);
     squares.push(new Square());
     updateShop();
     updateScore();
@@ -351,7 +714,7 @@ function buyTriangleSpawner() {           //MORE TRIANGLES
   if (score >= triangleSpawnerCost) {
     score -= triangleSpawnerCost;
     triangleSpawnerCount++;
-    triangleSpawnerCost = Math.floor(triangleSpawnerCost * 1.3);
+    triangleSpawnerCost = Math.floor(triangleSpawnerCost * 1.4);
     triangles.push(new Triangle());
     updateShop();
     updateScore();
@@ -364,13 +727,13 @@ function buyBallValue() {           //mORE VALUE LETS GO BABY!
     ballValue++;
     squareValue += 2;
     triangleValue += 5;
-    ballValueCost = Math.floor(ballValueCost * 1.8);
+    ballValueCost = Math.floor(ballValueCost * 1.7);
     updateShop();
     updateScore();
   }
 }
 
-// Drawing
+//                          UPDATES AND ANIMATION
 function animate() {                  //ANIMATION!
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -394,6 +757,17 @@ function animate() {                  //ANIMATION!
   p.draw();
   if (p.alpha <= 0) popups.splice(index, 1);
   });
+  
+  raindrops = raindrops.filter(drop => {
+    const alive = drop.update();
+    drop.draw();
+    return alive;
+  });
+
+  if (snake) {
+  snake.update();
+  snake.draw(ctx);
+  }
 
   requestAnimationFrame(animate);
 }
@@ -406,31 +780,57 @@ function updateShop() {           //UPDATE THE SHOP
   document.getElementById("ballValueBtn").innerText = "Increase Value (Now " + ballValue + ") — Cost: " + ballValueCost;
   document.getElementById("triangleSpawnerBtn").innerText = "Add Triangle (Now " + triangleSpawnerCount + ") — Cost: " + triangleSpawnerCost;
   document.getElementById("rebirth").innerText = "REBIRTH (Multi:  " + multi + ") — Cost: " + rebirthCost;
+  document.getElementById("critBtn").innerText = critBought 
+    ? "Critical Hit Upgrade (Owned, " + critChance + "%)" 
+    : "Critical Hit Upgrade — Cost: " + critUpgradeCost;
+
 } 
 
-function updateScore() {                    //UPDATE SCORE!
-  document.getElementById("score").innerText = "Score: " + Math.floor(score); 
+function updateScore() {
+  // Check for insane numbers and restart
+  if (score > 1e200) {
+    restartGame();
+  }
+
+  // Unlock more upgrades if score is high enough
+  if (score >= 5000000 && !hasMoreUpgrades) {
+    hasMoreUpgrades = true;
+    document.getElementById("MoreUpgradesButton").style.display = "block";
+  }
+
+  // Update UI
+  document.getElementById("score").innerText = "Score: " + Math.floor(score);
   document.getElementById("multiplier").innerText = "×" + multi;
+  document.getElementById("critDisplay").innerText = "Crit Chance: " + critChance + "%";
+
+  // Save automatically
   saveGame();
 }
 
-                                        // Save / Load
-function saveGame() {                         //SAVE GAME
+
+// ----------------- Save / Load -----------------
+function saveGame() {
   const saveData = {
     score, pointsPerClick, upgradeCost,
     autoClickerLevel, autoClickerCost,
     ballSpawnerCount, ballSpawnerCost,
     squareSpawnerCount, squareSpawnerCost,
+    triangleSpawnerCount, triangleSpawnerCost,
     ballValue, ballValueCost,
+    squareValue, triangleValue,
     balls: balls.map(b => ({x: b.x, y: b.y, dx: b.dx, dy: b.dy})),
     squares: squares.map(s => ({x: s.x, y: s.y, dx: s.dx, dy: s.dy})),
     triangles: triangles.map(t => ({x: t.x, y: t.y, dx: t.dx, dy: t.dy})),
-    multi, rebirthCost, growingCostMulti
+    multi, rebirthCost, growingCostMulti,
+    hasMoreUpgrades,
+    rainSpeed, boughtRain,
+    boughtSnake, snake,
+    critChance, boughtRaindrop
   };
   localStorage.setItem("clickerSave", JSON.stringify(saveData));
 }
 
-function loadGame() {                   //LOAD GAME
+function loadGame() {
   const saved = JSON.parse(localStorage.getItem("clickerSave"));
   if (saved) {
     score = saved.score || 0;
@@ -438,43 +838,79 @@ function loadGame() {                   //LOAD GAME
     upgradeCost = saved.upgradeCost || 10;
     autoClickerLevel = saved.autoClickerLevel || 1;
     autoClickerCost = saved.autoClickerCost || 50;
-    ballSpawnerCount = saved.ballSpawnerCount || 1;
-    ballSpawnerCost = saved.ballSpawnerCost || 200;
+
+    ballSpawnerCount = saved.ballSpawnerCount || 0;
+    ballSpawnerCost = saved.ballSpawnerCost || 100;
+
     squareSpawnerCount = saved.squareSpawnerCount || 0;
     squareSpawnerCost = saved.squareSpawnerCost || 200;
+
+    triangleSpawnerCount = saved.triangleSpawnerCount || 0;
+    triangleSpawnerCost = saved.triangleSpawnerCost || 500;
+
     ballValue = saved.ballValue || 1;
-    ballValueCost = saved.ballValueCost || 500;
+    squareValue = saved.squareValue || 2;
+    triangleValue = saved.triangleValue || 5;
+    ballValueCost = saved.ballValueCost || 1000;
+
     multi = saved.multi || 1;
-    rebirthCost = saved.rebirthCost || 1000000;
+    rebirthCost = saved.rebirthCost || 100000;
     growingCostMulti = saved.growingCostMulti || 1.5;
 
-    triangles = [];
-    if (saved.triangles && saved.triangles.length > 0) {
-      saved.triangles.forEach(t => triangles.push(new Triangle(t.x, t.y, t.dx, t.dy)));
+    hasMoreUpgrades = saved.hasMoreUpgrades || false;
+    raindrops = saved.raindrops || [];
+    rainSpeed = saved.rainSpeed || 200;
+    boughtRain = saved.boughtRain || false;
+
+    boughtSnake = saved.boughtSnake || false;
+    if (boughtSnake) snake = new Snake();
+
+    critChance = saved.critChance || 0;
+    if (critChance > 1) document.getElementById("critDisplay").style.display = "block";
+
+    //hide buttons
+    if (boughtRain == true) {
+      document.getElementById("rain").style.display = "none";
+      startRain();
+    }
+    if (hasMoreUpgrades == true) {
+      document.getElementById("MoreUpgradesButton").style.display = "none";
     }
 
-    balls = [];
-    if (saved.balls && saved.balls.length > 0) {
-      saved.balls.forEach(b => balls.push(new Ball(b.x, b.y, b.dx, b.dy)));
-    } else {
-      for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
-    }
+    boughtRaindrop = saved.boughtRaindrop || false;
 
-    squares = [];
-    if (saved.squares && saved.squares.length > 0) {
-      saved.squares.forEach(s => squares.push(new Square(s.x, s.y, s.dx, s.dy)));
-    } else {
-      for (let i = 0; i < squareSpawnerCount; i++) squares.push(new Square());
-    }
+    // Restore balls/squares/triangles (optional)
+    balls = (saved.balls || []).map(b => new Ball(b.x, b.y, b.dx, b.dy));
+    squares = (saved.squares || []).map(s => new Square(s.x, s.y, s.dx, s.dy));
+    triangles = (saved.triangles || []).map(t => new Triangle(t.x, t.y, t.dx, t.dy));
   } else {
+    // If no save, initialize default objects
+    balls = [];
     for (let i = 0; i < ballSpawnerCount; i++) balls.push(new Ball());
+    squares = [];
+    triangles = [];
+    raindrops = [];
   }
+  startRain();
   updateShop();
   updateScore();
 }
 
-function restartGame() {      
-  multi = 1;          //RESTART GAME
+function restartGame() {
+  if (rainInterval) {
+    clearInterval(rainInterval); // stop the rain
+    rainInterval = null;         // reset so it can start again later
+  }
+
+  if ('scrollRestoration' in history) {   // to go to top when start
+  history.scrollRestoration = 'manual';
+  }
+
+  window.onload = function() {
+    window.scrollTo(0, 0);
+  };
+
+  multi = 1;
   score = 0;
   pointsPerClick = 1;
   upgradeCost = 10;
@@ -488,7 +924,7 @@ function restartGame() {
   squareSpawnerCost = 200;
 
   triangleSpawnerCount = 0;
-  triangleSpawnerCost = 500
+  triangleSpawnerCost = 500;
 
   ballValue = 1;
   squareValue = 2;
@@ -497,19 +933,34 @@ function restartGame() {
 
   balls = [];
   squares = [];
-  triangles = []
+  triangles = [];
+  raindrops = [];
 
   growingCostMulti = 1.5;
-  rebirthCost = 100000
+  rebirthCost = 100000;
+  hasMoreUpgrades = false;
+  rainSpeed = 200;
+  boughtRain = false;
+  boughtRaindrop = false;
 
-  updateShop(); 
+  removeSnake(); //sets all snake variables to false and deletes snake
+
+  critChance = 0;
+
+
+  //HIDE THE UPGRADES
+  document.getElementById("rain").style.display = "none";
+  document.getElementById("MoreUpgradesButton").style.display = "none";
+  document.getElementById("critDisplay").style.display = "none";
+
+  updateShop();
   updateScore();
   saveGame();
 }
 
-//                                    CUSTOM STUFF!
+//                                  CUSTOM STUFF!
 
-function wait(ms) {       //wait function
+function wait(ms) { 
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -533,13 +984,46 @@ async function rebirth() {
   }
     score = 0;
     cur_score = 0;
+
     pointsPerClick = 1;
+    upgradeCost = 10;
+
+    autoClickerLevel = 1;
+    autoClickerCost = 50;
+
     ballSpawnerCount = 0;
+    ballSpawnerCost = 100;
+    ballValue = 1;
+
     squareSpawnerCount = 0;
+    squareSpawnerCost = 200;
+    squareValue = 2;
+
     triangleSpawnerCount = 0;
+    triangleSpawnerCost = 500;
+    triangleValue = 5;
+
+    ballValueCost = 1000;
+
+    growingCostMulti = 1.5;
+    rebirthCost = 100000;
+
     balls = [];
     squares = [];
     triangles = [];
+    if (rainInterval) {
+      clearInterval(rainInterval); // stop the rain
+      rainInterval = null;         // reset
+    }
+    raindrops = [];
+    boughtRain = false;
+    hasMoreUpgrades = false;
+    removeSnake();
+
+    boughtRaindrop = false;
+
+    critChance = 0;
+    document.getElementById("critDisplay").style.display = "none";
 
     let newRebirthCost = rebirthCost * growingCostMulti;
     if (newRebirthCost < 1000000) {
@@ -548,7 +1032,7 @@ async function rebirth() {
     if (newRebirthCost >= 1000000 && newRebirthCost < 10000000) {
       growingCostMulti *= 1.05;
     }
-    if (newRebirthCost >= 10000000 < 100000000) {
+    if (newRebirthCost >= 10000000 && newRebirthCost< 100000000) {
       growingCostMulti *= 1.01;
     }
     else {
@@ -556,11 +1040,10 @@ async function rebirth() {
     }
     rebirthCost = Math.floor(newRebirthCost);
 
+    document.getElementById("MoreUpgradesButton").style.display = "none";
+    document.getElementById("rain").style.display = "none";
     updateShop();
     updateScore();
-
-
-
     saveGame();
   }
 }
@@ -569,8 +1052,179 @@ function getRandom(min, max) {       //random number function!!!!
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function showButtons() {
+  document.getElementById("MoreUpgradesButton").style.display = "none";
+  hasMoreUpgrades = false;
+  if (pickedPath == false) {
+    document.getElementById("waterPathBtn").style.display = "block";
+  }
+}
 
+function waterPath() {
+  waterPathBtn.classList.add("fade");
+  waterPathBtn.style.pointerEvents = "none";
+  waterPathBtn.addEventListener("animationend", () => {
+  waterPathBtn.style.display = "none";
+  waterPathBtn.classList.remove("fade");
+  }, { once: true });
+
+  if (boughtRain == false) {
+    document.getElementById("rain").style.display = "block";
+  }
+}
+
+function createRaindrop() {
+  raindrops.push(new Raindrop());
+}
+
+function startRain() {
+  if (boughtRain && !rainInterval) { // only start if not already running
+    rainInterval = setInterval(createRaindrop, rainSpeed);
+  }
+}
+
+function buyRain() {
+  const rainCost = 1000000;
+  const rainBtn = document.getElementById("rain");
+  const snakeBtn = document.getElementById("snakeBtn");
+
+  if (score >= rainCost && !boughtRain) {
+    score -= rainCost;
+    boughtRain = true;
+    startRain(); 
+    updateScore();
+
+    // fade rain button out
+    rainBtn.classList.add("fade");
+    rainBtn.style.pointerEvents = "none"; // prevent clicks
+    rainBtn.addEventListener("animationend", () => {
+      rainBtn.style.display = "none";
+      rainBtn.classList.remove("fade");
+    }, { once: true });
+  }
+  //fade in the raindrop button
+    raindropBtn.style.opacity = 0;
+    raindropBtn.style.display = "block";
+    raindropBtn.style.pointerEvents = "none"; // disable until fully visible
+    raindropBtn.classList.add("fadein");
+    raindropBtn.addEventListener("animationend", () => {
+    raindropBtn.classList.remove("fadein");
+    raindropBtn.style.opacity = 1;
+    raindropBtn.style.pointerEvents = "auto"; // enable clicks
+    }, { once: true });
+}
+
+function buySnake() {
+  const snakeBtn = document.getElementById("snakeBtn");
+
+  if (score >= snakeSpawnerCost && !boughtSnake) {
+    score -= snakeSpawnerCost;
+    boughtSnake = true;
+    snake = new Snake();
+    updateScore();
+
+    // fade out snake button when bought
+    snakeBtn.classList.add("fade");
+    snakeBtn.style.pointerEvents = "none";
+    snakeBtn.addEventListener("animationend", () => {
+      snakeBtn.style.display = "none";
+      snakeBtn.classList.remove("fade");
+    }, { once: true });
+  }
+}
+
+function removeSnake() {
+  if (snake) {
+    snake = null;           // stop updating/drawing
+    boughtSnake = false;    // allow buying again
+    document.getElementById("snakeBtn").style.display = "none"; // hide button
+  }
+}
+
+function spawnRaindrop() {
+  const drop = document.createElement("div");
+  drop.innerText = "💧";
+  drop.classList.add("raindrop2");
+  drop.style.left = Math.random() * window.innerWidth + "px";
+  drop.style.top = "0px";
+
+  document.body.appendChild(drop);
+
+  // Click raindrop for bonus score
+  gained = 200 * multi * pointsPerClick
+  score += gained; // bonus
+  pointsThisInterval += gained;
+
+  // Remove after falling
+  setTimeout(() => {
+    if (drop.parentNode) drop.remove();
+  }, 1000);
+}
+
+function buyRaindrop() {
+  const btn = document.getElementById("raindropBtn");
+  if (score >= 5000000) {
+    score -= 5000000;
+    boughtRaindrop = true;
+    btn.disabled = true;       // cannot buy again
+    btn.style.opacity = 0.5;   // visual feedback
+    updateShop();
+    updateScore();
+
+    document.getElementById("raindropBtn").innerText = "Raindrops Unlocked!";
+    raindropBtn.classList.add("fade");
+    raindropBtn.style.pointerEvents = "none";
+    raindropBtn.addEventListener("animationend", () => {
+    raindropBtn.style.display = "none";
+    raindropBtn.classList.remove("fade");
+    }, { once: true });
+  }
+    // fade snake button in
+    snakeBtn.style.opacity = 0;
+    snakeBtn.style.display = "block";
+    snakeBtn.style.pointerEvents = "none"; // disable until fully visible
+    snakeBtn.classList.add("fadein");
+    snakeBtn.addEventListener("animationend", () => {
+    snakeBtn.classList.remove("fadein");
+    snakeBtn.style.opacity = 1;
+    snakeBtn.style.pointerEvents = "auto"; // enable clicks
+    }, { once: true });
+}
+
+function buyCrit() {
+      // critBtn.style.opacity = 0;
+    // critBtn.style.display = "block";
+    // critBtn.style.pointerEvents = "none"; // disable until fully visible
+    // critBtn.classList.add("fadein");
+    // critBtn.addEventListener("animationend", () => {
+    // critBtn.classList.remove("fadein");
+    // critBtn.style.opacity = 1;
+    // critBtn.style.pointerEvents = "auto"; // enable clicks
+    // }, { once: true });
+  const btn = document.getElementById("critBtn");
+  if (score >= critUpgradeCost && !critBought) {
+    score -= critUpgradeCost;
+    critChance = 2;  // gives 10% crit chance to start
+    critBought = true;
+    btn.disabled = true;       // cannot buy again
+    btn.style.opacity = 0.5;   // visual feedback
+    updateShop();
+    updateScore();
+
+    critBtn.classList.add("fade");
+    critBtn.style.pointerEvents = "none";
+    critBtn.addEventListener("animationend", () => {
+    critBtn.style.display = "none";
+    critBtn.classList.remove("fade");
+    }, { once: true });
+    document.getElementById("critDisplay").style.display = "block";
+    const critEl = document.getElementById("critDisplay");
+    critEl.classList.add("animate-crit-bounce");
+  }
+}
 
 loadGame();                   
-animate();                      //END OF JAVASCRIPT
+animate(); 
 </script>
+</body>
+</html>
