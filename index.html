@@ -965,6 +965,7 @@ function wait(ms) {
 }
 
 async function rebirth() {
+  document.getElementById("rebirth").style.display = "none";
   if (score >= rebirthCost) { // check cost
     multi += 1;
                                   //the ffing andimation lol!dfsd
@@ -1042,6 +1043,7 @@ async function rebirth() {
 
     document.getElementById("MoreUpgradesButton").style.display = "none";
     document.getElementById("rain").style.display = "none";
+    document.getElementById("rebirth").style.display = "block";
     updateShop();
     updateScore();
     saveGame();
